@@ -1,0 +1,36 @@
+name: Receive Sync from Hub
+on:
+  repository_dispatch:
+    # This matches the 'event_type' sent from the Hub repo
+    types: [sync_from_hub]
+
+jobs:
+  merge-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # We use the branch passed from the Hub (dev or live)
+          ref: ${{ github.event.client_payload.branch }}
+          fetch-depth: 0
+          # Use your PAT secret so the action has permission to push back
+          token: ${{ secrets.MY_GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Sync Action"
+          git config user.email "actions@github.com"
+
+      - name: Fetch and Merge from Hub
+        run: |
+          # Add the Hub repo as a remote source
+          git remote add hub https://github.com/farseen-cybro/base.git
+          git fetch hub
+
+          # Merge the main branch of the hub into the current target branch
+          # '--allow-unrelated-histories' is vital for first-time syncing
+          git merge hub/main --allow-unrelated-histories -m "Sync: Merged Hub updates into ${{ github.event.client_payload.branch }}"
+
+          # Push the changes back to the target repo
+          git push origin ${{ github.event.client_payload.branch }}
