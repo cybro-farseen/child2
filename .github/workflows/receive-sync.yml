@@ -1,0 +1,32 @@
+name: Receive Sync from Base
+on:
+  repository_dispatch:
+    types: [sync_from_base]
+
+jobs:
+  merge-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Target Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.branch }}
+          fetch-depth: 0
+          token: ${{ secrets.MY_GITHUB_TOKEN }}
+
+      - name: Git Config
+        run: |
+          git config user.name "GitHub Action Sync"
+          git config user.email "action@github.com"
+
+      - name: Merge Base/Main
+        run: |
+          # Adding the BASE repo as a remote
+          git remote add base_repo https://github.com/cybro-farseen/base.git
+          git fetch base_repo
+
+          # Merging main from base into current child branch (dev or live)
+          git merge base_repo/main --allow-unrelated-histories -m "Auto-sync from Base/Main"
+
+          # Push the merge back to child repo
+          git push origin ${{ github.event.client_payload.branch }}
