@@ -1,0 +1,38 @@
+name: Base Sync Orchestrator
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Which branch in Child repos to update?"
+        required: true
+        default: "dev"
+        type: choice
+        options: [dev, live]
+      sync_child1:
+        description: "Update Child 1?"
+        type: boolean
+        default: true
+      sync_child2:
+        description: "Update Child 2?"
+        type: boolean
+        default: true
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Signal Child 1
+        if: ${{ inputs.sync_child1 }}
+        run: |
+          curl -X POST -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/cybro-farseen/child1/dispatches \
+          -d '{"event_type": "sync_from_base", "client_payload": {"branch": "${{ inputs.target_branch }}"}}'
+
+      - name: Signal Child 2
+        if: ${{ inputs.sync_child2 }}
+        run: |
+          curl -X POST -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/cybro-farseen/child2/dispatches \
+          -d '{"event_type": "sync_from_base", "client_payload": {"branch": "${{ inputs.target_branch }}"}}'
